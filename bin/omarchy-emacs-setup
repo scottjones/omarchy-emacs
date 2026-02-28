@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Set up Omarchy Emacs configuration for the current user
+
+SHARE_DIR="/usr/share/omarchy-emacs"
+CONFIG_DIR="$HOME/.config/emacs"
+THEMED_DIR="$HOME/.config/omarchy/themed"
+
+mkdir -p "$CONFIG_DIR/themes"
+mkdir -p "$THEMED_DIR"
+
+# Copy config files (don't overwrite existing user customizations)
+for file in init.el shell-bashrc; do
+  if [[ ! -f "$CONFIG_DIR/$file" ]]; then
+    cp "$SHARE_DIR/config/$file" "$CONFIG_DIR/$file"
+  fi
+done
+
+for file in omarchy-dark-theme.el omarchy-light-theme.el; do
+  if [[ ! -f "$CONFIG_DIR/themes/$file" ]]; then
+    cp "$SHARE_DIR/config/themes/$file" "$CONFIG_DIR/themes/$file"
+  fi
+done
+
+# Install the color template
+if [[ ! -f "$THEMED_DIR/omarchy-colors.el.tpl" ]]; then
+  cp "$SHARE_DIR/omarchy-colors.el.tpl" "$THEMED_DIR/"
+fi
+
+# Generate colors for the current theme
+if command -v omarchy-theme-set &>/dev/null; then
+  theme=$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null)
+  if [[ -n $theme ]]; then
+    omarchy-theme-set "$theme"
+  fi
+fi
+
+echo "Omarchy Emacs setup complete!"
