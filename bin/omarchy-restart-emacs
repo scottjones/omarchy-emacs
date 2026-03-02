@@ -3,5 +3,7 @@
 # Reload Emacs theme and font to match Omarchy
 
 if command -v emacsclient &>/dev/null; then
-  emacsclient --no-wait --eval "(progn (omarchy-apply-theme) (omarchy-apply-font))" 2>/dev/null
+  emacsclient --no-wait --eval \
+    "(dolist (f (frame-list)) (with-selected-frame f (omarchy-apply-theme) (omarchy-apply-font)))" \
+    2>/dev/null
 fi

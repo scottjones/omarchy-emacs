@@ -81,7 +81,23 @@ For X11 builds running under XWayland, scale by the monitor factor."
 (omarchy-apply-theme)
 (omarchy-apply-font)
 
-;; Start the Emacs server so theme/font changes can signal a running Emacs
+;; Watch for theme changes so Emacs reloads from within its own event loop.
+;; We watch theme.name (not the theme/ directory) because theme-set does
+;; rm -rf + mv on the directory, which destroys inotify watches.
+(require 'filenotify)
+(defvar omarchy--theme-watch nil "File notification descriptor for theme changes.")
+(let ((theme-name-file (expand-file-name "~/.config/omarchy/current/theme.name")))
+  (when (file-exists-p theme-name-file)
+    (when omarchy--theme-watch
+      (file-notify-rm-watch omarchy--theme-watch))
+    (setq omarchy--theme-watch
+          (file-notify-add-watch
+           theme-name-file '(change)
+           (lambda (_event)
+             (omarchy-apply-theme)
+             (omarchy-apply-font))))))
+
+;; Start the Emacs server
 (require 'server)
 (unless (server-running-p)
   (server-start))
