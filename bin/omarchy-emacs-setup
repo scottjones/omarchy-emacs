@@ -48,6 +48,16 @@ for file in omarchy-dark-theme.el omarchy-light-theme.el; do
   fi
 done
 
+# Install font-set hook to sync Emacs font on font changes
+HOOKS_DIR="$HOME/.config/omarchy/hooks"
+mkdir -p "$HOOKS_DIR"
+if [[ ! -f "$HOOKS_DIR/font-set" ]]; then
+  cp "$SHARE_DIR/hooks/font-set" "$HOOKS_DIR/font-set"
+  chmod +x "$HOOKS_DIR/font-set"
+else
+  echo "Note: ~/.config/omarchy/hooks/font-set already exists — add 'omarchy-restart-emacs' to it to sync Emacs on font changes."
+fi
+
 # Install the color template
 if [[ ! -f "$THEMED_DIR/omarchy-colors.el.tpl" ]]; then
   cp "$SHARE_DIR/omarchy-colors.el.tpl" "$THEMED_DIR/"

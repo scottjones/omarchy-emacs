@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Sync Emacs font to match Omarchy
+omarchy-restart-emacs
