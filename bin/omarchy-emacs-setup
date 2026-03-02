@@ -22,6 +22,19 @@ if [[ -f "$HOME/.emacs" ]]; then
   fi
 fi
 
+# Detect legacy ~/.emacs.d which takes precedence over ~/.config/emacs/
+if [[ -d "$HOME/.emacs.d" ]]; then
+  echo "WARNING: ~/.emacs.d exists and will override ~/.config/emacs/, preventing Omarchy integration."
+  echo "If you move it, add any customizations you want to keep to ~/.config/emacs/init.el instead."
+  read -r -p "Move ~/.emacs.d to ~/.emacs.d.bak? [y/N] " response
+  if [[ "${response,,}" == "y" ]]; then
+    mv "$HOME/.emacs.d" "$HOME/.emacs.d.bak"
+    echo "Moved ~/.emacs.d to ~/.emacs.d.bak — review it and migrate any customizations to ~/.config/emacs/init.el"
+  else
+    echo "Skipping. Note: Omarchy theme/font integration will not work until ~/.emacs.d is removed or renamed."
+  fi
+fi
+
 # Copy config files (don't overwrite existing user customizations)
 for file in init.el shell-bashrc; do
   if [[ ! -f "$CONFIG_DIR/$file" ]]; then
