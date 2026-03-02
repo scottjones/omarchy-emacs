@@ -21,7 +21,7 @@
  `(mode-line-buffer-id ((t (:weight bold))))
 
  ;; Line numbers
- `(line-number ((t (:foreground ,omarchy-color-bright-black :background ,omarchy-color-bg))))
+ `(line-number ((t (:foreground ,omarchy-color-blue :background ,omarchy-color-bg))))
  `(line-number-current-line ((t (:foreground ,omarchy-color-accent :background ,omarchy-color-bg :weight bold))))
 
  ;; Minibuffer / prompts
@@ -37,8 +37,8 @@
  `(font-lock-function-call-face ((t (:foreground ,omarchy-color-blue))))
  `(font-lock-variable-name-face ((t (:foreground ,omarchy-color-bright-white))))
  `(font-lock-string-face ((t (:foreground ,omarchy-color-green))))
- `(font-lock-comment-face ((t (:foreground ,omarchy-color-bright-black))))
- `(font-lock-comment-delimiter-face ((t (:foreground ,omarchy-color-bright-black))))
+ `(font-lock-comment-face ((t (:foreground ,omarchy-color-bright-blue :slant italic))))
+ `(font-lock-comment-delimiter-face ((t (:foreground ,omarchy-color-bright-blue :slant italic))))
  `(font-lock-type-face ((t (:foreground ,omarchy-color-yellow))))
  `(font-lock-constant-face ((t (:foreground ,omarchy-color-white))))
  `(font-lock-builtin-face ((t (:foreground ,omarchy-color-cyan))))
