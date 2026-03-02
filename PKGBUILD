@@ -1,6 +1,6 @@
 # Maintainer: Scott Jones <scottajones@gmail.com>
 pkgname=omarchy-emacs
-pkgver=1.0.0
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="Emacs integration for Omarchy with automatic theme and font syncing"
 arch=('any')
