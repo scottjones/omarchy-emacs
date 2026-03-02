@@ -67,7 +67,10 @@ For X11 builds running under XWayland, scale by the monitor factor."
   (let ((font (omarchy-current-font))
         (height (omarchy-current-font-size)))
     (when (and font (not (string-empty-p font)))
-      (set-face-attribute 'default nil :family font :height height))))
+      (set-face-attribute 'default nil :family font :height height)
+      (dolist (frame (frame-list))
+        (set-face-attribute 'default frame :family font :height height))
+      (add-to-list 'default-frame-alist `(font . ,(format "%s-%d" font (/ height 10)))))))
 
 ;;; --- Clean UI ---
 
