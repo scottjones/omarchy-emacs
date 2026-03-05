@@ -35,7 +35,10 @@ if [[ -d "$HOME/.emacs.d" ]]; then
   fi
 fi
 
-# Copy config files (don't overwrite existing user customizations)
+# Always update omarchy.el (managed by omarchy-emacs, safe to overwrite)
+cp "$SHARE_DIR/config/omarchy.el" "$CONFIG_DIR/omarchy.el"
+
+# Copy user-owned files only if they don't exist yet
 for file in init.el shell-bashrc; do
   if [[ ! -f "$CONFIG_DIR/$file" ]]; then
     cp "$SHARE_DIR/config/$file" "$CONFIG_DIR/$file"

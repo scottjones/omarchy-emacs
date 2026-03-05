@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Return the font size configured in the default terminal emulator.
+# Reads ~/.config/xdg-terminals.list to determine which terminal is active,
+# then extracts the font size from that terminal's config file.
+
+term=$(grep -m1 -oP '^\w\S*' ~/.config/xdg-terminals.list 2>/dev/null)
+
+case "$term" in
+  Alacritty*)
+    sed -n '/^\[font\]/,/^\[/p' ~/.config/alacritty/alacritty.toml 2>/dev/null \
+      | grep -oP '^size\s*=\s*\K[0-9]+\.?[0-9]*'
+    ;;
+  kitty*)
+    grep -oP '^font_size\s+\K[0-9]+\.?[0-9]*' ~/.config/kitty/kitty.conf 2>/dev/null
+    ;;
+  *ghostty*)
+    grep -oP '^font-size\s*=\s*\K[0-9]+\.?[0-9]*' ~/.config/ghostty/config 2>/dev/null
+    ;;
+  *)
+    # No default terminal set — try each config in turn
+    grep -oP '^font-size\s*=\s*\K[0-9]+\.?[0-9]*' ~/.config/ghostty/config 2>/dev/null \
+      || grep -oP '^font_size\s+\K[0-9]+\.?[0-9]*' ~/.config/kitty/kitty.conf 2>/dev/null \
+      || sed -n '/^\[font\]/,/^\[/p' ~/.config/alacritty/alacritty.toml 2>/dev/null \
+           | grep -oP '^size\s*=\s*\K[0-9]+\.?[0-9]*'
+    ;;
+esac

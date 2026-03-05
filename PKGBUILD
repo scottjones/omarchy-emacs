@@ -17,6 +17,7 @@ package() {
   # Install config files
   install -dm755 "$pkgdir/usr/share/omarchy-emacs/config/themes"
   install -Dm644 config/init.el "$pkgdir/usr/share/omarchy-emacs/config/init.el"
+  install -Dm644 config/omarchy.el "$pkgdir/usr/share/omarchy-emacs/config/omarchy.el"
   install -Dm644 config/shell-bashrc "$pkgdir/usr/share/omarchy-emacs/config/shell-bashrc"
   install -Dm644 config/themes/omarchy-dark-theme.el "$pkgdir/usr/share/omarchy-emacs/config/themes/omarchy-dark-theme.el"
   install -Dm644 config/themes/omarchy-light-theme.el "$pkgdir/usr/share/omarchy-emacs/config/themes/omarchy-light-theme.el"
@@ -30,5 +31,6 @@ package() {
   # Install bin scripts to PATH
   install -Dm755 bin/omarchy-emacs-setup "$pkgdir/usr/bin/omarchy-emacs-setup"
   install -Dm755 bin/omarchy-restart-emacs "$pkgdir/usr/bin/omarchy-restart-emacs"
+  install -Dm755 bin/omarchy-font-size-current "$pkgdir/usr/bin/omarchy-font-size-current"
   install -Dm755 bin/omarchy-install-emacs "$pkgdir/usr/bin/omarchy-install-emacs"
 }
