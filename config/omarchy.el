@@ -105,11 +105,11 @@ For X11 builds running under XWayland, scale by the monitor factor."
 (defvar omarchy--terminal-watch nil "File notification descriptor for terminal config changes.")
 (let* ((term (string-trim
               (shell-command-to-string
-               "grep -m1 -oP '^\\w\\S*' ~/.config/xdg-terminals.list 2>/dev/null")))
+               "for e in $(sed 's/#.*//' ~/.config/xdg-terminals.list 2>/dev/null); do for d in ~/.local/share/applications /usr/share/applications /usr/local/share/applications; do [ -f \"$d/$e\" ] && echo \"$e\" && exit; done; done; for c in com.mitchellh.ghostty.desktop kitty.desktop Alacritty.desktop; do for d in ~/.local/share/applications /usr/share/applications /usr/local/share/applications; do [ -f \"$d/$c\" ] && echo \"$c\" && exit; done; done")))
        (config-file (cond
-                     ((string-prefix-p "Alacritty" term)
+                     ((string-match-p "[Aa]lacritty" term)
                       (expand-file-name "~/.config/alacritty/alacritty.toml"))
-                     ((string-prefix-p "kitty" term)
+                     ((string-match-p "kitty" term)
                       (expand-file-name "~/.config/kitty/kitty.conf"))
                      ((string-match-p "ghostty" term)
                       (expand-file-name "~/.config/ghostty/config")))))
