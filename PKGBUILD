@@ -6,10 +6,9 @@ pkgdesc="Emacs integration for Omarchy with automatic theme and font syncing"
 arch=('any')
 url="https://github.com/scottjones/omarchy-emacs"
 license=('MIT')
-depends=('emacs-wayland')
-optdepends=('omarchy: Omarchy Linux distribution')
+depends=('emacs-wayland' 'bash')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('1b12c90d5eb9156205c8a2d223a18b843420fd64d2081e3f7eed96e250fa71e6')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
@@ -33,4 +32,7 @@ package() {
   install -Dm755 bin/omarchy-restart-emacs "$pkgdir/usr/bin/omarchy-restart-emacs"
   install -Dm755 bin/omarchy-font-size-current "$pkgdir/usr/bin/omarchy-font-size-current"
   install -Dm755 bin/omarchy-install-emacs "$pkgdir/usr/bin/omarchy-install-emacs"
+
+  # Install license
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
