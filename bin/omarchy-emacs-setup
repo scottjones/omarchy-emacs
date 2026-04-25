@@ -51,14 +51,20 @@ for file in omarchy-dark-theme.el omarchy-light-theme.el; do
   fi
 done
 
-# Install font-set hook to sync Emacs font on font changes
+# Install font-set hook to sync Emacs font on font changes.
+# Overwrite when missing or when the managed marker is present, so updates
+# flow to existing installs. Customized hooks (marker removed) are preserved.
 HOOKS_DIR="$HOME/.config/omarchy/hooks"
 mkdir -p "$HOOKS_DIR"
-if [[ ! -f "$HOOKS_DIR/font-set" ]]; then
-  cp "$SHARE_DIR/hooks/font-set" "$HOOKS_DIR/font-set"
-  chmod +x "$HOOKS_DIR/font-set"
+HOOK_FILE="$HOOKS_DIR/font-set"
+if [[ ! -f "$HOOK_FILE" ]] || grep -q "omarchy-emacs:managed" "$HOOK_FILE"; then
+  cp "$SHARE_DIR/hooks/font-set" "$HOOK_FILE"
+  chmod +x "$HOOK_FILE"
 else
-  echo "Note: ~/.config/omarchy/hooks/font-set already exists — add 'omarchy-restart-emacs' to it to sync Emacs on font changes."
+  echo "Note: ~/.config/omarchy/hooks/font-set is customized (no managed marker) — leaving it alone."
+  echo "      If it's actually a stale copy from a prior install, replace it with:"
+  echo "        cp $SHARE_DIR/hooks/font-set $HOOK_FILE && chmod +x $HOOK_FILE"
+  echo "      Otherwise ensure it calls 'omarchy-restart-emacs' to keep Emacs in sync."
 fi
 
 # Install the color template
