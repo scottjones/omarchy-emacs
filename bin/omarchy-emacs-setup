@@ -45,11 +45,11 @@ for file in init.el shell-bashrc; do
   fi
 done
 
-for file in omarchy-dark-theme.el omarchy-light-theme.el; do
-  if [[ ! -f "$CONFIG_DIR/themes/$file" ]]; then
-    cp "$SHARE_DIR/config/themes/$file" "$CONFIG_DIR/themes/$file"
-  fi
-done
+# Theme is managed by omarchy-emacs (always overwrite).
+cp "$SHARE_DIR/config/themes/omarchy-theme.el" "$CONFIG_DIR/themes/omarchy-theme.el"
+
+# Remove legacy split themes from upgrades (<1.9). Safe — they're managed files.
+rm -f "$CONFIG_DIR/themes/omarchy-dark-theme.el" "$CONFIG_DIR/themes/omarchy-light-theme.el"
 
 # Install font-set hook to sync Emacs font on font changes.
 # Overwrite when missing or when the managed marker is present, so updates

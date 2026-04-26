@@ -26,16 +26,16 @@
     (if (file-exists-p colors-file)
         (progn
           (load-file colors-file)
-          ;; Fully disable and unload both themes to clear all stale face settings
-          (dolist (theme '(omarchy-dark omarchy-light))
+          ;; Fully disable and unload the theme to clear all stale face settings.
+          ;; Includes the legacy split themes so upgrades from <1.9 clean up cleanly.
+          (dolist (theme '(omarchy omarchy-dark omarchy-light))
             (disable-theme theme)
             (put theme 'theme-settings nil)
             (setq custom-known-themes (delq theme custom-known-themes)))
-          (let* ((theme (if (omarchy-light-theme-p) 'omarchy-light 'omarchy-dark))
-                 (theme-file (locate-file (concat (symbol-name theme) "-theme")
-                                          custom-theme-load-path '(".el"))))
+          (let ((theme-file (locate-file "omarchy-theme"
+                                         custom-theme-load-path '(".el"))))
             (load-file theme-file)
-            (enable-theme theme)))
+            (enable-theme 'omarchy)))
       (message "Omarchy colors not available; skipping theme load."))))
 
 ;;; --- Omarchy font integration ---
