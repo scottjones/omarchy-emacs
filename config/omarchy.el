@@ -3,6 +3,7 @@
 ;;; Put your personal customizations in init.el instead.
 
 (require 'subr-x)
+(require 'cl-lib)
 
 ;; Ensure Omarchy bin is on PATH (needed when started via emacs.service)
 (let ((omarchy-bin (expand-file-name "~/.local/share/omarchy/bin")))
@@ -40,17 +41,93 @@
 
 ;;; --- Omarchy font integration ---
 
+(defun omarchy--match-in-file (file regex &optional group)
+  "Return the GROUP-th match (default 1) when REGEX matches in FILE, or nil."
+  (let ((path (expand-file-name file)))
+    (when (file-readable-p path)
+      (with-temp-buffer
+        (insert-file-contents path)
+        (goto-char (point-min))
+        (when (re-search-forward regex nil t)
+          (match-string (or group 1)))))))
+
+(defun omarchy--current-terminal ()
+  "Return a symbol naming the active default terminal, or nil.
+Possible values: \\='alacritty, \\='kitty, \\='ghostty.
+Resolves via ~/.config/xdg-terminals.list, falling back to a probe
+of known candidates."
+  (let* ((dirs '("~/.local/share/applications"
+                 "/usr/share/applications"
+                 "/usr/local/share/applications"))
+         (installed
+          (lambda (entry)
+            (and (stringp entry)
+                 (not (string-empty-p entry))
+                 (cl-some (lambda (d) (file-exists-p (expand-file-name entry d)))
+                          dirs))))
+         (list-file (expand-file-name "~/.config/xdg-terminals.list"))
+         (entries (when (file-readable-p list-file)
+                    (with-temp-buffer
+                      (insert-file-contents list-file)
+                      (mapcar (lambda (l)
+                                (string-trim (replace-regexp-in-string "#.*" "" l)))
+                              (split-string (buffer-string) "\n")))))
+         (entry (or (cl-find-if installed entries)
+                    (cl-find-if installed
+                                '("com.mitchellh.ghostty.desktop"
+                                  "kitty.desktop"
+                                  "Alacritty.desktop")))))
+    (when entry
+      (cond
+       ((string-match-p "[Aa]lacritty" entry) 'alacritty)
+       ((string-match-p "kitty" entry) 'kitty)
+       ((string-match-p "ghostty" entry) 'ghostty)))))
+
+(defun omarchy--terminal-config-file ()
+  "Return the active terminal's config file path, or nil."
+  (pcase (omarchy--current-terminal)
+    ('alacritty (expand-file-name "~/.config/alacritty/alacritty.toml"))
+    ('kitty     (expand-file-name "~/.config/kitty/kitty.conf"))
+    ('ghostty   (expand-file-name "~/.config/ghostty/config"))))
+
+(defun omarchy--terminal-font-size ()
+  "Return the font size from the active terminal's config, or nil.
+Returned as a string like \"11.5\"."
+  (pcase (omarchy--current-terminal)
+    ('alacritty
+     ;; Restrict to the [font] section so unrelated `size =` entries don't win.
+     (let ((file (expand-file-name "~/.config/alacritty/alacritty.toml")))
+       (when (file-readable-p file)
+         (with-temp-buffer
+           (insert-file-contents file)
+           (goto-char (point-min))
+           (when (re-search-forward "^\\[font\\][ \t]*$" nil t)
+             (let ((bound (or (save-excursion
+                                (when (re-search-forward "^\\[" nil t)
+                                  (match-beginning 0)))
+                              (point-max))))
+               (when (re-search-forward
+                      "^size[ \t]*=[ \t]*\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"
+                      bound t)
+                 (match-string 1))))))))
+    ('kitty
+     (omarchy--match-in-file "~/.config/kitty/kitty.conf"
+                             "^font_size[ \t]+\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))
+    ('ghostty
+     (omarchy--match-in-file "~/.config/ghostty/config"
+                             "^font-size[ \t]*=[ \t]*\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))))
+
 (defun omarchy-current-font ()
-  "Return the current Omarchy font name."
-  (string-trim
-   (shell-command-to-string "omarchy-font-current")))
+  "Return the current Omarchy monospace font family from Waybar's stylesheet."
+  (or (omarchy--match-in-file "~/.config/waybar/style.css"
+                              "font-family:[ \t]*[\"']?\\([^;\"'\n]+\\)")
+      ""))
 
 (defun omarchy-current-font-size ()
   "Return the current Omarchy font size in Emacs height units (1/10 pt).
 The pgtk build handles display scaling natively, so no adjustment is needed.
 For X11 builds running under XWayland, scale by the monitor factor."
-  (let ((size (string-trim
-               (shell-command-to-string "omarchy-font-size-current")))
+  (let ((size (omarchy--terminal-font-size))
         (scale (if (featurep 'pgtk)
                    1.0
                  (let ((s (string-to-number
@@ -58,7 +135,7 @@ For X11 builds running under XWayland, scale by the monitor factor."
                             (shell-command-to-string
                              "hyprctl monitors | grep -oP 'scale:\\s*\\K[0-9]+\\.?[0-9]*' | head -1")))))
                    (if (or (zerop s) (< s 1)) 1.0 s)))))
-    (if (and size (not (string-empty-p size)))
+    (if size
         (round (* (string-to-number size) scale 10))
       120)))
 
@@ -103,16 +180,7 @@ For X11 builds running under XWayland, scale by the monitor factor."
 
 ;; Watch for terminal config changes so font size updates are picked up.
 (defvar omarchy--terminal-watch nil "File notification descriptor for terminal config changes.")
-(let* ((term (string-trim
-              (shell-command-to-string
-               "for e in $(sed 's/#.*//' ~/.config/xdg-terminals.list 2>/dev/null); do for d in ~/.local/share/applications /usr/share/applications /usr/local/share/applications; do [ -f \"$d/$e\" ] && echo \"$e\" && exit; done; done; for c in com.mitchellh.ghostty.desktop kitty.desktop Alacritty.desktop; do for d in ~/.local/share/applications /usr/share/applications /usr/local/share/applications; do [ -f \"$d/$c\" ] && echo \"$c\" && exit; done; done")))
-       (config-file (cond
-                     ((string-match-p "[Aa]lacritty" term)
-                      (expand-file-name "~/.config/alacritty/alacritty.toml"))
-                     ((string-match-p "kitty" term)
-                      (expand-file-name "~/.config/kitty/kitty.conf"))
-                     ((string-match-p "ghostty" term)
-                      (expand-file-name "~/.config/ghostty/config")))))
+(let ((config-file (omarchy--terminal-config-file)))
   (when (and config-file (file-exists-p config-file))
     (when omarchy--terminal-watch
       (file-notify-rm-watch omarchy--terminal-watch))
