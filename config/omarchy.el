@@ -59,7 +59,7 @@ For X11 builds running under XWayland, scale by the monitor factor."
                              "hyprctl monitors | grep -oP 'scale:\\s*\\K[0-9]+\\.?[0-9]*' | head -1")))))
                    (if (or (zerop s) (< s 1)) 1.0 s)))))
     (if (and size (not (string-empty-p size)))
-        (truncate (* (string-to-number size) scale 10))
+        (round (* (string-to-number size) scale 10))
       120)))
 
 (defun omarchy-apply-font ()
@@ -71,7 +71,7 @@ For X11 builds running under XWayland, scale by the monitor factor."
       (set-face-attribute 'default nil :family font :height height)
       (dolist (frame (frame-list))
         (set-face-attribute 'default frame :family font :height height))
-      (add-to-list 'default-frame-alist `(font . ,(format "%s-%d" font (/ height 10)))))))
+      (add-to-list 'default-frame-alist `(font . ,(format "%s-%g" font (/ height 10.0)))))))
 
 ;;; --- Clean UI ---
 
