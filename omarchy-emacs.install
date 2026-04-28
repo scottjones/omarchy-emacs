@@ -8,8 +8,12 @@ EOF
 
 post_upgrade() {
   cat <<EOF
-==> omarchy-emacs was upgraded. Re-run 'omarchy-emacs-setup' to refresh
-    the managed ~/.config/emacs/omarchy.el (and other managed files).
-    Without this step, fixes shipped in the upgrade won't reach Emacs.
+==> omarchy-emacs was upgraded. Run 'omarchy-restart-emacs' to reload the
+    integration in any running Emacs daemon — the user-side omarchy.el is
+    a shim that loads the package-installed code, so the new code is
+    already on disk; only in-memory state needs to refresh.
+
+    If you upgraded from < 1.8.5, also run 'omarchy-emacs-setup' once to
+    convert your ~/.config/emacs/omarchy.el into the shim.
 EOF
 }
