@@ -145,10 +145,18 @@ For X11 builds running under XWayland, scale by the monitor factor."
   (let ((font (omarchy-current-font))
         (height (omarchy-current-font-size)))
     (when (and font (not (string-empty-p font)))
-      (set-face-attribute 'default nil :family font :height height)
-      (dolist (frame (frame-list))
-        (set-face-attribute 'default frame :family font :height height))
-      (add-to-list 'default-frame-alist `(font . ,(format "%s-%g" font (/ height 10.0)))))))
+      (let ((font-spec (format "%s-%g" font (/ height 10.0))))
+        ;; Update the default face so non-graphical frames and faces that
+        ;; inherit from default still pick up the new family/height.
+        (set-face-attribute 'default nil :family font :height height)
+        ;; set-frame-font is what actually retags a live pgtk frame's font;
+        ;; set-face-attribute alone only takes effect on newly-created frames.
+        (dolist (frame (frame-list))
+          (when (display-graphic-p frame)
+            (set-frame-font font-spec nil (list frame))))
+        ;; Replace (not append) the font entry so default-frame-alist doesn't
+        ;; accumulate stale entries across switches.
+        (setf (alist-get 'font default-frame-alist) font-spec)))))
 
 ;;; --- Clean UI ---
 
@@ -178,17 +186,22 @@ For X11 builds running under XWayland, scale by the monitor factor."
              (omarchy-apply-theme)
              (omarchy-apply-font))))))
 
-;; Watch for terminal config changes so font size updates are picked up.
-(defvar omarchy--terminal-watch nil "File notification descriptor for terminal config changes.")
-(let ((config-file (omarchy--terminal-config-file)))
-  (when (and config-file (file-exists-p config-file))
-    (when omarchy--terminal-watch
-      (file-notify-rm-watch omarchy--terminal-watch))
-    (setq omarchy--terminal-watch
-          (file-notify-add-watch
-           config-file '(change)
-           (lambda (_event)
-             (omarchy-apply-font))))))
+;; Watch font sources so size and family changes are picked up live.
+;; Both files are watched because omarchy-font-set updates them in sequence
+;; (terminal config first, then waybar) — watching only the terminal would
+;; trigger a re-apply with stale waybar data and never see the eventual update.
+(defvar omarchy--font-watches nil
+  "File notification descriptors for font-related files.")
+(dolist (desc omarchy--font-watches)
+  (ignore-errors (file-notify-rm-watch desc)))
+(setq omarchy--font-watches nil)
+(dolist (file (delq nil (list (omarchy--terminal-config-file)
+                              (expand-file-name "~/.config/waybar/style.css"))))
+  (when (file-exists-p file)
+    (push (file-notify-add-watch
+           file '(change)
+           (lambda (_event) (omarchy-apply-font)))
+          omarchy--font-watches)))
 
 ;; Start the Emacs server
 (require 'server)
