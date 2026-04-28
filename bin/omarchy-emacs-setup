@@ -35,8 +35,22 @@ if [[ -d "$HOME/.emacs.d" ]]; then
   fi
 fi
 
-# Always update omarchy.el (managed by omarchy-emacs, safe to overwrite)
-cp "$SHARE_DIR/config/omarchy.el" "$CONFIG_DIR/omarchy.el"
+# Write omarchy.el as a thin shim that loads the package-installed
+# implementation from $SHARE_DIR. This way pacman/AUR upgrades update
+# the integration code in place — re-running setup isn't required to
+# pick up new code, just an Emacs reload (omarchy-restart-emacs).
+cat > "$CONFIG_DIR/omarchy.el" <<EOF
+;;; omarchy.el --- Omarchy Emacs integration shim -*- lexical-binding: t -*-
+;;; Managed by omarchy-emacs. Loads the package-installed implementation so
+;;; that AUR upgrades propagate without re-running omarchy-emacs-setup.
+;;; Put your personal customizations in init.el instead.
+
+(let ((omarchy--system-file "$SHARE_DIR/config/omarchy.el"))
+  (when (file-exists-p omarchy--system-file)
+    (load omarchy--system-file)))
+
+;;; omarchy.el ends here
+EOF
 
 # Copy user-owned files only if they don't exist yet
 for file in init.el shell-bashrc; do
