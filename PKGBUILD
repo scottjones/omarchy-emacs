@@ -9,7 +9,7 @@ license=('MIT')
 depends=('emacs-wayland' 'bash')
 install="$pkgname.install"
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('7fa1c7fcb28581361fc8bf66e5d4c3ba9d785741cc42060f206b5d892bdcd72c')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
