@@ -65,21 +65,23 @@ cp "$SHARE_DIR/config/themes/omarchy-theme.el" "$CONFIG_DIR/themes/omarchy-theme
 # Remove legacy split themes from upgrades (<1.9). Safe — they're managed files.
 rm -f "$CONFIG_DIR/themes/omarchy-dark-theme.el" "$CONFIG_DIR/themes/omarchy-light-theme.el"
 
-# Install font-set hook to sync Emacs font on font changes.
+# Install font-set and theme-set hooks to sync Emacs on font/theme changes.
 # Overwrite when missing or when the managed marker is present, so updates
 # flow to existing installs. Customized hooks (marker removed) are preserved.
 HOOKS_DIR="$HOME/.config/omarchy/hooks"
 mkdir -p "$HOOKS_DIR"
-HOOK_FILE="$HOOKS_DIR/font-set"
-if [[ ! -f "$HOOK_FILE" ]] || grep -q "omarchy-emacs:managed" "$HOOK_FILE"; then
-  cp "$SHARE_DIR/hooks/font-set" "$HOOK_FILE"
-  chmod +x "$HOOK_FILE"
-else
-  echo "Note: ~/.config/omarchy/hooks/font-set is customized (no managed marker) — leaving it alone."
-  echo "      If it's actually a stale copy from a prior install, replace it with:"
-  echo "        cp $SHARE_DIR/hooks/font-set $HOOK_FILE && chmod +x $HOOK_FILE"
-  echo "      Otherwise ensure it calls 'omarchy-restart-emacs' to keep Emacs in sync."
-fi
+for hook in font-set theme-set; do
+  HOOK_FILE="$HOOKS_DIR/$hook"
+  if [[ ! -f "$HOOK_FILE" ]] || grep -q "omarchy-emacs:managed" "$HOOK_FILE"; then
+    cp "$SHARE_DIR/hooks/$hook" "$HOOK_FILE"
+    chmod +x "$HOOK_FILE"
+  else
+    echo "Note: ~/.config/omarchy/hooks/$hook is customized (no managed marker) — leaving it alone."
+    echo "      If it's actually a stale copy from a prior install, replace it with:"
+    echo "        cp $SHARE_DIR/hooks/$hook $HOOK_FILE && chmod +x $HOOK_FILE"
+    echo "      Otherwise ensure it calls 'omarchy-restart-emacs' to keep Emacs in sync."
+  fi
+done
 
 # Install the color template
 if [[ ! -f "$THEMED_DIR/omarchy-colors.el.tpl" ]]; then

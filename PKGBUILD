@@ -26,6 +26,7 @@ package() {
 
   # Install hooks
   install -Dm755 hooks/font-set "$pkgdir/usr/share/omarchy-emacs/hooks/font-set"
+  install -Dm755 hooks/theme-set "$pkgdir/usr/share/omarchy-emacs/hooks/theme-set"
 
   # Install bin scripts to PATH
   install -Dm755 bin/omarchy-emacs-setup "$pkgdir/usr/bin/omarchy-emacs-setup"
