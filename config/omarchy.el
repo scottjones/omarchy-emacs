@@ -13,17 +13,47 @@
 
 ;;; --- Omarchy theme integration ---
 
-(add-to-list 'load-path "~/.config/omarchy/current/theme")
+;; Omarchy 4 moved the active theme out of ~/.config/omarchy/current/ into
+;; XDG state (~/.local/state/omarchy/current/). Resolve whichever base a
+;; given machine uses so the integration works on both Omarchy 3 and 4:
+;; prefer the new location, fall back to the old, and default to the new
+;; one when neither exists yet (fresh install before the first theme-set).
+(defun omarchy--current-base ()
+  "Return the directory holding Omarchy's current theme assets."
+  (let ((candidates (list (expand-file-name "~/.local/state/omarchy/current")
+                          (expand-file-name "~/.config/omarchy/current"))))
+    (or (cl-find-if (lambda (d) (file-directory-p (expand-file-name "theme" d)))
+                    candidates)
+        (car candidates))))
+
+(defvar omarchy-theme-directory
+  (expand-file-name "theme" (omarchy--current-base))
+  "Directory holding the current Omarchy theme's generated assets.")
+(defvar omarchy-theme-name-file
+  (expand-file-name "theme.name" (omarchy--current-base))
+  "File holding the current Omarchy theme name; watched for theme changes.")
+
+(add-to-list 'load-path omarchy-theme-directory)
 (add-to-list 'custom-theme-load-path "~/.config/emacs/themes")
 
 (defun omarchy-light-theme-p ()
-  "Return non-nil if the current Omarchy theme is a light theme."
-  (file-exists-p "~/.config/omarchy/current/theme/light.mode"))
+  "Return non-nil if the current Omarchy theme is a light theme.
+Omarchy 4 records the mode in colors.toml (`mode = \"light\"'); older
+themes signalled it with a light.mode marker file, still honored here."
+  (or (file-exists-p (expand-file-name "light.mode" omarchy-theme-directory))
+      (let ((colors (expand-file-name "colors.toml" omarchy-theme-directory)))
+        (and (file-readable-p colors)
+             (with-temp-buffer
+               (insert-file-contents colors)
+               (goto-char (point-min))
+               (and (re-search-forward
+                     "^[ \t]*mode[ \t]*=[ \t]*[\"']?light[\"']?[ \t]*$" nil t)
+                    t))))))
 
 (defun omarchy-apply-theme ()
   "Load Omarchy colors and apply them as an Emacs theme."
   (interactive)
-  (let ((colors-file (expand-file-name "~/.config/omarchy/current/theme/omarchy-colors.el")))
+  (let ((colors-file (expand-file-name "omarchy-colors.el" omarchy-theme-directory)))
     (if (file-exists-p colors-file)
         (progn
           (load-file colors-file)
@@ -175,7 +205,7 @@ For X11 builds running under XWayland, scale by the monitor factor."
 ;; rm -rf + mv on the directory, which destroys inotify watches.
 (require 'filenotify)
 (defvar omarchy--theme-watch nil "File notification descriptor for theme changes.")
-(let ((theme-name-file (expand-file-name "~/.config/omarchy/current/theme.name")))
+(let ((theme-name-file omarchy-theme-name-file))
   (when (file-exists-p theme-name-file)
     (when omarchy--theme-watch
       (file-notify-rm-watch omarchy--theme-watch))

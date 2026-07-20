@@ -4,7 +4,7 @@ An Arch package that auto-syncs Emacs to [Omarchy's](https://github.com/basecamp
 
 ## What it syncs
 
-- **Theme colors.** Driven from `~/.config/omarchy/current/theme/omarchy-colors.el`, which Omarchy regenerates from a template (shipped by this package as `omarchy-colors.el.tpl`) every time you run `omarchy-theme-set`. The Emacs theme covers core faces, font-lock, mode-line, line numbers, completion, links, errors/warnings, org-mode, and diff/ediff. See `config/themes/omarchy-theme.el`.
+- **Theme colors.** Driven from `~/.local/state/omarchy/current/theme/omarchy-colors.el`, which Omarchy regenerates from a template (shipped by this package as `omarchy-colors.el.tpl`) every time you run `omarchy-theme-set`. The Emacs theme covers core faces, font-lock, mode-line, line numbers, completion, links, errors/warnings, org-mode, and diff/ediff. See `config/themes/omarchy-theme.el`.
 - **Font family.** Read from `~/.config/waybar/style.css` — the same source `omarchy-font-set` writes to.
 - **Font size.** Read from your default terminal's config:
   - alacritty — `~/.config/alacritty/alacritty.toml`, `[font] size`
@@ -12,7 +12,7 @@ An Arch package that auto-syncs Emacs to [Omarchy's](https://github.com/basecamp
   - ghostty — `~/.config/ghostty/config`, `font-size`
 
   Default terminal is resolved via `~/.config/xdg-terminals.list`.
-- **No Emacs restart required.** Theme changes are picked up by a file watcher on `~/.config/omarchy/current/theme.name`. Font changes trigger via the `font-set` hook.
+- **No Emacs restart required.** Theme changes are picked up by a file watcher on `~/.local/state/omarchy/current/theme.name`. Font changes trigger via the `font-set` hook.
 
 ## Install
 
@@ -66,7 +66,7 @@ systemctl --user restart emacs.service
 
 If you had customizations in the old `init.el`, salvage them from the `.bak` file and paste them after the `(load "omarchy")` line.
 
-**No colors / faces look like default Emacs.** Check that `~/.config/omarchy/current/theme/omarchy-colors.el` exists. If it doesn't, run `omarchy-theme-set <theme>` once to generate it.
+**No colors / faces look like default Emacs.** Check that `~/.local/state/omarchy/current/theme/omarchy-colors.el` exists. If it doesn't, run `omarchy-theme-set <theme>` once to generate it.
 
 **`~/.emacs` or `~/.emacs.d` warning during setup.** Those legacy paths take precedence over `~/.config/emacs/`. Let the setup script back them up, or do it yourself.
 

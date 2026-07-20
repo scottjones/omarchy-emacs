@@ -4,7 +4,12 @@
 
 (require 'omarchy-colors)
 
-(let* ((light (file-exists-p "~/.config/omarchy/current/theme/light.mode"))
+(let* ((light (if (fboundp 'omarchy-light-theme-p)
+                  (omarchy-light-theme-p)
+                ;; Standalone fallback (theme loaded without omarchy.el):
+                ;; honor the light.mode marker at either Omarchy location.
+                (or (file-exists-p "~/.local/state/omarchy/current/theme/light.mode")
+                    (file-exists-p "~/.config/omarchy/current/theme/light.mode"))))
        (highlight-bg          (if light omarchy-color-bright-white omarchy-color-bright-black))
        (mode-line-inactive-bg (if light omarchy-color-bright-white omarchy-color-black))
        (line-number-fg        (if light omarchy-color-bright-black omarchy-color-blue))

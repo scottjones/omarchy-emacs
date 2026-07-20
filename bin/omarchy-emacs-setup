@@ -90,7 +90,7 @@ fi
 
 # Generate colors for the current theme
 if command -v omarchy-theme-set &>/dev/null; then
-  theme=$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null)
+  theme=$(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null)
   if [[ -n $theme ]]; then
     omarchy-theme-set "$theme"
   fi
