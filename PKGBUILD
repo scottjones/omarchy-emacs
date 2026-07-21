@@ -8,7 +8,7 @@ url="https://github.com/scottjones/omarchy-emacs"
 license=('MIT')
 depends=('emacs-wayland' 'bash')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('9198ba31e334cd0c0f8661ad11d0cb856a1757cf4b93156abfc5a73c25797184')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
