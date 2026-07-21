@@ -148,10 +148,16 @@ Returned as a string like \"11.5\"."
                              "^font-size[ \t]*=[ \t]*\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))))
 
 (defun omarchy-current-font ()
-  "Return the current Omarchy monospace font family from Waybar's stylesheet."
-  (or (omarchy--match-in-file "~/.config/waybar/style.css"
-                              "font-family:[ \t]*[\"']?\\([^;\"'\n]+\\)")
-      ""))
+  "Return the current Omarchy monospace font family.
+Omarchy 4 makes fontconfig the source of truth and resolves it with the
+`omarchy-font-current' command (fc-match monospace); Waybar's stylesheet
+is no longer updated on font changes. Older Omarchy versions predate that
+command and drove the family from Waybar, so fall back to it there."
+  (if (executable-find "omarchy-font-current")
+      (string-trim (shell-command-to-string "omarchy-font-current"))
+    (or (omarchy--match-in-file "~/.config/waybar/style.css"
+                                "font-family:[ \t]*[\"']?\\([^;\"'\n]+\\)")
+        "")))
 
 (defun omarchy-current-font-size ()
   "Return the current Omarchy font size in Emacs height units (1/10 pt).
@@ -217,15 +223,17 @@ For X11 builds running under XWayland, scale by the monitor factor."
              (omarchy-apply-font))))))
 
 ;; Watch font sources so size and family changes are picked up live.
-;; Both files are watched because omarchy-font-set updates them in sequence
-;; (terminal config first, then waybar) — watching only the terminal would
-;; trigger a re-apply with stale waybar data and never see the eventual update.
+;; Size lives in the terminal config; the family source moved to fontconfig
+;; in Omarchy 4 (Waybar is no longer updated) and was Waybar's stylesheet
+;; before that. Watch all applicable sources — a file that never changes is
+;; a harmless watch, and the managed font-set hook reloads us regardless.
 (defvar omarchy--font-watches nil
   "File notification descriptors for font-related files.")
 (dolist (desc omarchy--font-watches)
   (ignore-errors (file-notify-rm-watch desc)))
 (setq omarchy--font-watches nil)
 (dolist (file (delq nil (list (omarchy--terminal-config-file)
+                              (expand-file-name "~/.config/fontconfig/fonts.conf")
                               (expand-file-name "~/.config/waybar/style.css"))))
   (when (file-exists-p file)
     (push (file-notify-add-watch
