@@ -147,52 +147,95 @@ Returned as a string like \"11.5\"."
      (omarchy--match-in-file "~/.config/ghostty/config"
                              "^font-size[ \t]*=[ \t]*\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))))
 
+(defun omarchy--terminal-font-family ()
+  "Return the font family configured in the active terminal, or nil.
+This is the family the user actually sees: `omarchy-font-set' always
+rewrites it, whereas the fontconfig `monospace' alias can be shadowed by a
+system conf.d rule (e.g. /etc/fonts/conf.d/50-omarchy.conf) and never
+reflect the user's choice."
+  (pcase (omarchy--current-terminal)
+    ('alacritty
+     ;; Restrict to the [font] section so an unrelated `family =` won't win.
+     (let ((file (expand-file-name "~/.config/alacritty/alacritty.toml")))
+       (when (file-readable-p file)
+         (with-temp-buffer
+           (insert-file-contents file)
+           (goto-char (point-min))
+           (when (re-search-forward "^\\[font\\][ \t]*$" nil t)
+             (let ((bound (or (save-excursion
+                                (when (re-search-forward "^\\[" nil t)
+                                  (match-beginning 0)))
+                              (point-max))))
+               (when (re-search-forward
+                      "family[ \t]*=[ \t]*[\"']\\([^\"']+\\)[\"']" bound t)
+                 (match-string 1))))))))
+    ('kitty
+     (omarchy--match-in-file "~/.config/kitty/kitty.conf"
+                             "^font_family[ \t]+\\(.+?\\)[ \t]*$"))
+    ('ghostty
+     (omarchy--match-in-file "~/.config/ghostty/config"
+                             "^font-family[ \t]*=[ \t]*[\"']?\\([^\"'\n]+?\\)[\"']?[ \t]*$"))
+    ('foot
+     (omarchy--match-in-file "~/.config/foot/foot.ini"
+                             "^font[ \t]*=[ \t]*\\([^:\n]+\\)"))))
+
 (defun omarchy-current-font ()
-  "Return the current Omarchy monospace font family.
-Omarchy 4 makes fontconfig the source of truth and resolves it with the
-`omarchy-font-current' command (fc-match monospace); Waybar's stylesheet
-is no longer updated on font changes. Older Omarchy versions predate that
-command and drove the family from Waybar, so fall back to it there."
-  (if (executable-find "omarchy-font-current")
-      (string-trim (shell-command-to-string "omarchy-font-current"))
-    (or (omarchy--match-in-file "~/.config/waybar/style.css"
-                                "font-family:[ \t]*[\"']?\\([^;\"'\n]+\\)")
-        "")))
+  "Return the font family Emacs should use to match Omarchy.
+Prefer the active terminal's configured family — it is what the user
+actually sees, and `omarchy-font-set' keeps it current. Fall back to the
+fontconfig `monospace' alias (via `omarchy-font-current'), then to Waybar
+for older Omarchy versions. The alias is only a fallback because a system
+conf.d rule can shadow the user's fontconfig override, leaving the alias
+stuck on the packaged default while the terminal shows the chosen font."
+  (or (let ((fam (omarchy--terminal-font-family)))
+        (and fam (setq fam (string-trim fam))
+             (not (string-empty-p fam)) fam))
+      (and (executable-find "omarchy-font-current")
+           (let ((f (string-trim (shell-command-to-string "omarchy-font-current"))))
+             (and (not (string-empty-p f)) f)))
+      (omarchy--match-in-file "~/.config/waybar/style.css"
+                              "font-family:[ \t]*[\"']?\\([^;\"'\n]+\\)")
+      ""))
 
 (defun omarchy-current-font-size ()
-  "Return the current Omarchy font size in Emacs height units (1/10 pt).
-The pgtk build handles display scaling natively, so no adjustment is needed.
-For X11 builds running under XWayland, scale by the monitor factor."
-  (let ((size (omarchy--terminal-font-size))
-        (scale (if (featurep 'pgtk)
-                   1.0
-                 (let ((s (string-to-number
-                           (string-trim
-                            (shell-command-to-string
-                             "hyprctl monitors | grep -oP 'scale:\\s*\\K[0-9]+\\.?[0-9]*' | head -1")))))
-                   (if (or (zerop s) (< s 1)) 1.0 s)))))
-    (if size
-        (round (* (string-to-number size) scale 10))
-      120)))
+  "Return the intended Omarchy font size in Emacs height units (1/10 pt).
+This mirrors the active terminal's point size; `omarchy-apply-font' realizes
+it per display backend. Defaults to 12pt when no terminal size is found."
+  (let ((size (omarchy--terminal-font-size)))
+    (round (* (if size (string-to-number size) 12.0) 10))))
 
 (defun omarchy-apply-font ()
-  "Set the Emacs default font to match Omarchy."
-  (interactive)
+  "Set the Emacs default font to match Omarchy.
+On the pgtk build, specify an absolute PIXEL size rather than a point size.
+Omarchy 4's `omarchy display text size' folds its scaling into BOTH the
+terminal point size we mirror AND GNOME's text-scaling-factor, and pgtk
+applies that factor to point-sized fonts — so a point size renders scaled
+twice and ends up larger than the terminal. A pixel size sidesteps the GTK
+factor (and its startup-only caching, which otherwise lags live size changes),
+so Emacs matches the terminal at any size; Wayland's per-output surface
+scaling still handles HiDPI. 1pt = 1/72in at GTK's 96 logical DPI, so
+px = pt * 96/72. X11/XWayland builds ignore the GTK factor and get no surface
+scaling, so they keep a point size scaled by the monitor factor."
   (let ((font (omarchy-current-font))
-        (height (omarchy-current-font-size)))
+        (pt (/ (omarchy-current-font-size) 10.0)))
     (when (and font (not (string-empty-p font)))
-      (let ((font-spec (format "%s-%g" font (/ height 10.0))))
-        ;; Update the default face so non-graphical frames and faces that
-        ;; inherit from default still pick up the new family/height.
-        (set-face-attribute 'default nil :family font :height height)
-        ;; set-frame-font is what actually retags a live pgtk frame's font;
-        ;; set-face-attribute alone only takes effect on newly-created frames.
+      (let ((spec
+             (if (featurep 'pgtk)
+                 (format "%s:pixelsize=%d" font (max 1 (round (* pt (/ 96.0 72.0)))))
+               (let ((s (string-to-number
+                         (string-trim
+                          (shell-command-to-string
+                           "hyprctl monitors | grep -oP 'scale:\\s*\\K[0-9]+\\.?[0-9]*' | head -1")))))
+                 (format "%s-%g" font (* pt (if (or (zerop s) (< s 1)) 1.0 s)))))))
+        ;; Set the default face (covers new frames and inheriting faces)...
+        (set-face-attribute 'default nil :font spec)
+        ;; ...then retag each live graphical frame (set-face-attribute alone
+        ;; only takes on newly-created frames).
         (dolist (frame (frame-list))
           (when (display-graphic-p frame)
-            (set-frame-font font-spec nil (list frame))))
-        ;; Replace (not append) the font entry so default-frame-alist doesn't
-        ;; accumulate stale entries across switches.
-        (setf (alist-get 'font default-frame-alist) font-spec)))))
+            (set-frame-font spec nil (list frame))))
+        ;; Replace (not append) so default-frame-alist doesn't accumulate.
+        (setf (alist-get 'font default-frame-alist) spec)))))
 
 ;;; --- Clean UI ---
 
