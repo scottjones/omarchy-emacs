@@ -1,0 +1,70 @@
+name: Copilot code review
+
+# Automatically request a GitHub Copilot code review on new pull requests.
+#
+# Requirements:
+#   * Copilot code review must be enabled for this repository/account
+#     (Copilot subscription). Until it is, the Copilot reviewer bot won't
+#     appear as an available reviewer and this workflow simply no-ops.
+#   * A simpler, workflow-free alternative is the repository setting
+#     Settings -> Rules -> "Automatically request Copilot code review".
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  request-copilot-review:
+    runs-on: ubuntu-latest
+    # Don't pester draft PRs.
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Request review from Copilot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          set -euo pipefail
+
+          # Copilot's reviewer is exposed as a bot among the repo's suggested
+          # actors. Look it up by login; bail cleanly if it isn't available.
+          bot_id="$(gh api graphql \
+            -f query='
+              query($owner: String!, $name: String!) {
+                repository(owner: $owner, name: $name) {
+                  suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 100) {
+                    nodes {
+                      login
+                      __typename
+                      ... on Bot { id }
+                    }
+                  }
+                }
+              }' \
+            -f owner="$OWNER" -f name="$REPO" \
+            --jq '.data.repository.suggestedActors.nodes[]
+                  | select(.login == "copilot-pull-request-reviewer")
+                  | .id')"
+
+          if [ -z "${bot_id:-}" ]; then
+            echo "::notice::Copilot code review is not available for this repository yet — skipping."
+            exit 0
+          fi
+
+          # union: true adds Copilot alongside any human reviewers already set.
+          gh api graphql \
+            -f query='
+              mutation($prId: ID!, $botId: ID!) {
+                requestReviews(input: {pullRequestId: $prId, botIds: [$botId], union: true}) {
+                  pullRequest { id }
+                }
+              }' \
+            -f prId="$PR_NODE_ID" -f botId="$bot_id"
+
+          echo "Requested a Copilot code review."
