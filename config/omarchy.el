@@ -284,6 +284,17 @@ scaling, so they keep a point size scaled by the monitor factor."
            (lambda (_event) (omarchy-apply-font)))
           omarchy--font-watches)))
 
+;; Migrate existing installs to drop-in hooks for users who upgrade via pacman
+;; without re-running omarchy-emacs-setup. Cheap guard: once the drop-in exists,
+;; skip entirely (no subprocess). Async (destination 0) with errors ignored so
+;; startup never blocks. Guarded on omarchy-hook-install — the Omarchy 4 signal,
+;; since only O4 supports the <type>.d/ layout the sync script writes.
+(when (and (executable-find "omarchy-hook-install")
+           (not (file-exists-p
+                 (expand-file-name "~/.config/omarchy/hooks/theme-set.d/omarchy-emacs")))
+           (executable-find "omarchy-emacs-sync-hooks"))
+  (ignore-errors (call-process "omarchy-emacs-sync-hooks" nil 0 nil)))
+
 ;; Start the Emacs server
 (require 'server)
 (unless (server-running-p)

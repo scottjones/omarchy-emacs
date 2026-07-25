@@ -66,63 +66,9 @@ cp "$SHARE_DIR/config/themes/omarchy-theme.el" "$CONFIG_DIR/themes/omarchy-theme
 rm -f "$CONFIG_DIR/themes/omarchy-dark-theme.el" "$CONFIG_DIR/themes/omarchy-light-theme.el"
 
 # Install font-set and theme-set hooks to sync Emacs on font/theme changes.
-#
-# Omarchy 4 runs every script in <type>.d/ in addition to the single <type>
-# file, so we install a distinctly-named drop-in (<type>.d/omarchy-emacs).
-# That coexists with any other hook the user keeps (e.g. a custom RGB-sync
-# theme-set) instead of fighting over the one <type> slot — the collision
-# that otherwise leaves Emacs unsynced. Omarchy 3 has no .d support, so there
-# we fall back to the historical single <type> file, preserving a
-# user-customized one (managed marker removed) exactly as before.
-HOOKS_DIR="$HOME/.config/omarchy/hooks"
-mkdir -p "$HOOKS_DIR"
-
-# .d hook directories arrived with the Omarchy 4 hook system; omarchy-hook-install
-# is the CLI added alongside that support, so its presence is a safe O4 signal.
-if command -v omarchy-hook-install &>/dev/null; then
-  hook_dropins=1
-else
-  hook_dropins=
-fi
-
-# True when FILE is one we own: it carries the managed marker, or its only
-# executable line is `omarchy-restart-emacs` (a pre-marker copy from an older
-# install). Such a file is safe to replace or retire; anything else is the
-# user's own hook and must be left alone.
-omarchy_emacs_owns_hook() {
-  local file=$1
-  [[ -f $file ]] || return 1
-  grep -q "omarchy-emacs:managed" "$file" && return 0
-  local body
-  body=$(grep -vE '^[[:space:]]*(#.*)?$' "$file" | tr -d '[:space:]')
-  [[ $body == "omarchy-restart-emacs" ]]
-}
-
-for hook in font-set theme-set; do
-  if [[ -n $hook_dropins ]]; then
-    # Omarchy 4: managed drop-in, always refreshed — the omarchy-emacs name is
-    # ours, so there is nothing of the user's to preserve.
-    install -Dm755 "$SHARE_DIR/hooks/$hook" "$HOOKS_DIR/$hook.d/omarchy-emacs"
-    # Retire a single-file copy we own so the hook doesn't fire twice; leave a
-    # genuinely custom single-file hook (marker removed, real commands) alone.
-    if omarchy_emacs_owns_hook "$HOOKS_DIR/$hook"; then
-      rm -f "$HOOKS_DIR/$hook"
-    fi
-  else
-    # Omarchy 3: single-file hook. Overwrite when missing or managed; preserve
-    # a customized one (marker removed).
-    HOOK_FILE="$HOOKS_DIR/$hook"
-    if [[ ! -f "$HOOK_FILE" ]] || grep -q "omarchy-emacs:managed" "$HOOK_FILE"; then
-      cp "$SHARE_DIR/hooks/$hook" "$HOOK_FILE"
-      chmod +x "$HOOK_FILE"
-    else
-      echo "Note: ~/.config/omarchy/hooks/$hook is customized (no managed marker) — leaving it alone."
-      echo "      If it's actually a stale copy from a prior install, replace it with:"
-      echo "        cp $SHARE_DIR/hooks/$hook $HOOK_FILE && chmod +x $HOOK_FILE"
-      echo "      Otherwise ensure it calls 'omarchy-restart-emacs' to keep Emacs in sync."
-    fi
-  fi
-done
+# The logic lives in omarchy-emacs-sync-hooks so the shim (config/omarchy.el)
+# can reuse it to self-heal existing installs on Emacs startup.
+omarchy-emacs-sync-hooks
 
 # Install the color template
 if [[ ! -f "$THEMED_DIR/omarchy-colors.el.tpl" ]]; then
