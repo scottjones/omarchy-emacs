@@ -7,11 +7,15 @@ An Arch package that auto-syncs Emacs to [Omarchy's](https://github.com/basecamp
 - **Theme colors.** Driven from `~/.local/state/omarchy/current/theme/omarchy-colors.el`, which Omarchy regenerates from a template (shipped by this package as `omarchy-colors.el.tpl`) every time you run `omarchy-theme-set`. The Emacs theme covers core faces, font-lock, mode-line, line numbers, completion, links, errors/warnings, org-mode, and diff/ediff. See `config/themes/omarchy-theme.el`.
 - **Font family.** Read from `~/.config/waybar/style.css` — the same source `omarchy-font-set` writes to.
 - **Font size.** Read from your default terminal's config:
+  - foot — `~/.config/foot/foot.ini`, the `:size=` in `font=`
   - alacritty — `~/.config/alacritty/alacritty.toml`, `[font] size`
   - kitty — `~/.config/kitty/kitty.conf`, `font_size`
   - ghostty — `~/.config/ghostty/config`, `font-size`
 
-  Default terminal is resolved via `~/.config/xdg-terminals.list`.
+  Default terminal is resolved via `~/.config/xdg-terminals.list`, falling back
+  to probing for an installed terminal — foot first, since it is Omarchy 4's
+  default and a fresh install writes no `xdg-terminals.list` until you run
+  `omarchy default terminal`.
 - **No Emacs restart required.** Theme and font changes trigger a live reload via the `theme-set` and `font-set` hooks (with a file watcher on `~/.local/state/omarchy/current/theme.name` as a backup for themes).
 
 ## Install

@@ -83,9 +83,13 @@ themes signalled it with a light.mode marker file, still honored here."
 
 (defun omarchy--current-terminal ()
   "Return a symbol naming the active default terminal, or nil.
-Possible values: \\='alacritty, \\='kitty, \\='ghostty.
+Possible values: \\='foot, \\='alacritty, \\='kitty, \\='ghostty.
 Resolves via ~/.config/xdg-terminals.list, falling back to a probe
-of known candidates."
+of known candidates. Foot leads the probe list: it is Omarchy 4's default
+terminal and the only one a fresh install ships, and `omarchy-default-terminal'
+only writes xdg-terminals.list once the user picks a terminal explicitly —
+so on a fresh install the probe is all we have. Foot is absent on Omarchy 3,
+where the probe skips it and the old order stands."
   (let* ((dirs '("~/.local/share/applications"
                  "/usr/share/applications"
                  "/usr/local/share/applications"))
@@ -104,21 +108,26 @@ of known candidates."
                               (split-string (buffer-string) "\n")))))
          (entry (or (cl-find-if installed entries)
                     (cl-find-if installed
-                                '("com.mitchellh.ghostty.desktop"
+                                '("foot.desktop"
+                                  "com.mitchellh.ghostty.desktop"
                                   "kitty.desktop"
                                   "Alacritty.desktop")))))
     (when entry
       (cond
        ((string-match-p "[Aa]lacritty" entry) 'alacritty)
        ((string-match-p "kitty" entry) 'kitty)
-       ((string-match-p "ghostty" entry) 'ghostty)))))
+       ((string-match-p "ghostty" entry) 'ghostty)
+       ;; Match foot last: it is a substring of nothing else here, but
+       ;; "foot-server.desktop"/"footclient.desktop" are also valid entries.
+       ((string-match-p "foot" entry) 'foot)))))
 
 (defun omarchy--terminal-config-file ()
   "Return the active terminal's config file path, or nil."
   (pcase (omarchy--current-terminal)
     ('alacritty (expand-file-name "~/.config/alacritty/alacritty.toml"))
     ('kitty     (expand-file-name "~/.config/kitty/kitty.conf"))
-    ('ghostty   (expand-file-name "~/.config/ghostty/config"))))
+    ('ghostty   (expand-file-name "~/.config/ghostty/config"))
+    ('foot      (expand-file-name "~/.config/foot/foot.ini"))))
 
 (defun omarchy--terminal-font-size ()
   "Return the font size from the active terminal's config, or nil.
@@ -145,7 +154,13 @@ Returned as a string like \"11.5\"."
                              "^font_size[ \t]+\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))
     ('ghostty
      (omarchy--match-in-file "~/.config/ghostty/config"
-                             "^font-size[ \t]*=[ \t]*\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))))
+                             "^font-size[ \t]*=[ \t]*\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))
+    ('foot
+     ;; Foot carries the size in the font spec itself:
+     ;;   font=JetBrainsMono Nerd Font:size=9
+     ;; Anchor on the `font=' key so `font-bold'/`font-italic' can't win.
+     (omarchy--match-in-file "~/.config/foot/foot.ini"
+                             "^font[ \t]*=[^\n]*:size=\\([0-9]+\\(?:\\.[0-9]+\\)?\\)"))))
 
 (defun omarchy--terminal-font-family ()
   "Return the font family configured in the active terminal, or nil.
