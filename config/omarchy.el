@@ -32,6 +32,8 @@
 (defvar omarchy-theme-name-file
   (expand-file-name "theme.name" (omarchy--current-base))
   "File holding the current Omarchy theme name; watched for theme changes.")
+(defvar omarchy-color-bg)
+(defvar omarchy-color-fg)
 
 (add-to-list 'load-path omarchy-theme-directory)
 (add-to-list 'custom-theme-load-path "~/.config/emacs/themes")
@@ -57,6 +59,14 @@ themes signalled it with a light.mode marker file, still honored here."
     (if (file-exists-p colors-file)
         (progn
           (load-file colors-file)
+          ;; Keep the incoming base colors visible while the shared theme
+          ;; symbol is disabled and rebuilt below.
+          (set-face-attribute 'default nil
+                              :background omarchy-color-bg
+                              :foreground omarchy-color-fg)
+          (modify-all-frames-parameters
+           `((background-color . ,omarchy-color-bg)
+             (foreground-color . ,omarchy-color-fg)))
           ;; Fully disable and unload the theme to clear all stale face settings.
           ;; Includes the legacy split themes so upgrades from <1.9 clean up cleanly.
           (dolist (theme '(omarchy omarchy-dark omarchy-light))
