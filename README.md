@@ -38,7 +38,7 @@ If you have a legacy `~/.emacs` or `~/.emacs.d`, the setup script will warn you 
 | `~/.config/emacs/themes/omarchy-theme.el` | **Managed** — overwritten on every setup run. |
 | `~/.config/emacs/shell-bashrc` | **Yours** — rcfile for Emacs `M-x shell`. |
 | `~/.config/omarchy/hooks/{theme-set,font-set}.d/omarchy-emacs` | **Managed** hook drop-ins (Omarchy 4). Each just calls `omarchy-restart-emacs`; they coexist with any other hooks you keep in those `.d/` directories. On Omarchy 3 (no `.d/` support) these are installed as the single `~/.config/omarchy/hooks/{theme-set,font-set}` files instead, managed while the `omarchy-emacs:managed` marker is intact. |
-| `~/.config/omarchy/themed/omarchy-colors.el.tpl` | **Managed** — overwritten on every setup run. Color template consumed by `omarchy-theme-set`. |
+| `~/.config/omarchy/themed/omarchy-colors.el.tpl` | **Managed** — overwritten on every setup run, and refreshed on Emacs startup if a package upgrade left it behind. Color template consumed by `omarchy-theme-set`. |
 
 ## Customizing
 

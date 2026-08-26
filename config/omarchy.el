@@ -320,6 +320,73 @@ scaling, so they keep a point size scaled by the monitor factor."
            (executable-find "omarchy-emacs-sync-hooks"))
   (ignore-errors (call-process "omarchy-emacs-sync-hooks" nil 0 nil)))
 
+;; Refresh the color template for users who upgrade via pacman without
+;; re-running omarchy-emacs-setup. Nothing runs setup automatically -- the
+;; PKGBUILD has no install scriptlet, and a pacman scriptlet could not do this
+;; anyway, since it runs as root against root's HOME -- so an upgraded install
+;; would keep a template that predates the semantic colors and silently render
+;; every shade through the blend fallback until the next manual setup run.
+;;
+;; Cheap guard: compare the two files and skip entirely when they match, which
+;; is every startup after the first.
+
+(defconst omarchy--packaged-template
+  "/usr/share/omarchy-emacs/omarchy-colors.el.tpl"
+  "Color template shipped by the package.")
+
+(defconst omarchy--user-template
+  (expand-file-name "~/.config/omarchy/themed/omarchy-colors.el.tpl")
+  "Color template Omarchy renders at theme-set time.")
+
+(defun omarchy--render-colors ()
+  "Render `omarchy--user-template' into the current theme directory.
+Substitutes Omarchy's own resolved colors, so this stays in step with
+what `omarchy-theme-set' would produce without waiting for a theme
+change. Returns non-nil when the file was written."
+  (let ((colors (expand-file-name "colors.toml" omarchy-theme-directory)))
+    (when (and (file-readable-p colors)
+               (file-readable-p omarchy--user-template)
+               (file-writable-p omarchy-theme-directory)
+               (executable-find "omarchy-theme-color"))
+      (let ((table (with-temp-buffer
+                     (when (zerop (call-process "omarchy-theme-color" nil t nil
+                                                "--file" colors "--all"))
+                       (split-string (buffer-string) "
+" t)))))
+        (when table
+          (with-temp-buffer
+            (insert-file-contents omarchy--user-template)
+            (dolist (row table)
+              (let* ((parts (split-string row "	"))
+                     (key (car parts))
+                     (value (cadr parts)))
+                (when (and key value)
+                  (goto-char (point-min))
+                  (while (search-forward (format "{{ %s }}" key) nil t)
+                    (replace-match value t t)))))
+            (write-region (point-min) (point-max)
+                          (expand-file-name "omarchy-colors.el"
+                                            omarchy-theme-directory)
+                          nil 'quiet))
+          t)))))
+
+(defun omarchy--file-contents (file)
+  "Contents of FILE as a string, or nil when it cannot be read."
+  (when (file-readable-p file)
+    (with-temp-buffer
+      (insert-file-contents-literally file)
+      (buffer-string))))
+
+(ignore-errors
+  (let ((packaged (omarchy--file-contents omarchy--packaged-template)))
+    (when (and packaged
+               (not (equal packaged
+                           (omarchy--file-contents omarchy--user-template))))
+      (make-directory (file-name-directory omarchy--user-template) t)
+      (copy-file omarchy--packaged-template omarchy--user-template t)
+      (when (omarchy--render-colors)
+        (omarchy-apply-theme)))))
+
 ;; Start the Emacs server
 (require 'server)
 (unless (server-running-p)
