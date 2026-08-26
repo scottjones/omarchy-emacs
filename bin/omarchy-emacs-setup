@@ -70,10 +70,12 @@ rm -f "$CONFIG_DIR/themes/omarchy-dark-theme.el" "$CONFIG_DIR/themes/omarchy-lig
 # can reuse it to self-heal existing installs on Emacs startup.
 omarchy-emacs-sync-hooks
 
-# Install the color template
-if [[ ! -f "$THEMED_DIR/omarchy-colors.el.tpl" ]]; then
-  cp "$SHARE_DIR/omarchy-colors.el.tpl" "$THEMED_DIR/"
-fi
+# Color template is managed by omarchy-emacs (always overwrite). It gained the
+# semantic colors (muted, dark_foreground, lighter_background, selection) in
+# 1.10; installing it only when absent would leave every existing user on a
+# template that renders them empty, and the theme silently falling back to
+# blended shades forever.
+cp "$SHARE_DIR/omarchy-colors.el.tpl" "$THEMED_DIR/"
 
 # Generate colors for the current theme
 if command -v omarchy-theme-set &>/dev/null; then
