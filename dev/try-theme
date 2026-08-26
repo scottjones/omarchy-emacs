@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Preview the working-tree Emacs theme against any Omarchy theme, without
+# installing the package and without changing the live theme.
+#
+#   dev/try-theme                  # the current Omarchy theme
+#   dev/try-theme tokyo-night      # any installed theme, by directory name
+#   dev/try-theme --list           # what is installed
+#   dev/try-theme --tty gruvbox    # terminal frame instead of a GUI window
+#
+# Colors are rendered by Omarchy's own resolver (omarchy-theme-color), the same
+# one omarchy-theme-set-templates uses, so what you see is what a real
+# theme-set would produce -- including the legacy color0..color15 aliases it
+# synthesizes for themes that predate the semantic colors.toml.
+set -euo pipefail
+
+REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+TPL="$REPO/omarchy-colors.el.tpl"
+OUT_BASE="${TMPDIR:-/tmp}/omarchy-emacs-try"
+
+die() { echo "try-theme: $*" >&2; exit 1; }
+
+TTY=0
+case "${1:-}" in
+  -h|--help)
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+    exit 0
+    ;;
+  --list)
+    { ls -1 "${OMARCHY_PATH:-/usr/share/omarchy}/themes" 2>/dev/null
+      ls -1 "$HOME/.config/omarchy/themes" 2>/dev/null; } | sort -u
+    exit 0
+    ;;
+  --tty) TTY=1; shift ;;
+esac
+
+THEME="${1:-$(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null || true)}"
+[[ -n $THEME ]] || die "no theme given and no current theme found"
+
+command -v omarchy-theme-color >/dev/null || die "omarchy-theme-color not on PATH"
+[[ -f $TPL ]] || die "missing template: $TPL"
+
+if [[ -d $HOME/.config/omarchy/themes/$THEME ]]; then
+  THEME_DIR="$HOME/.config/omarchy/themes/$THEME"
+else
+  THEME_DIR="${OMARCHY_PATH:-/usr/share/omarchy}/themes/$THEME"
+fi
+COLORS="$THEME_DIR/colors.toml"
+[[ -f $COLORS ]] || die "no colors.toml for '$THEME' (try --list)"
+
+OUT="$OUT_BASE/$THEME"
+mkdir -p "$OUT"
+
+# Mirror omarchy-theme-set-templates' add_template_value: every key is exposed
+# as {{ key }}, {{ key_strip }} and, for plain hex, {{ key_rgb }}.
+SED_SCRIPT=$(mktemp)
+trap 'rm -f "$SED_SCRIPT"' EXIT
+while IFS=$'\t' read -r key value; do
+  printf 's|{{ %s }}|%s|g\n' "$key" "$value" >>"$SED_SCRIPT"
+  printf 's|{{ %s_strip }}|%s|g\n' "$key" "${value#\#}" >>"$SED_SCRIPT"
+  if [[ $value =~ ^#[0-9A-Fa-f]{6}$ ]]; then
+    printf 's|{{ %s_rgb }}|%d,%d,%d|g\n' "$key" \
+      "0x${value:1:2}" "0x${value:3:2}" "0x${value:5:2}" >>"$SED_SCRIPT"
+  fi
+done < <(omarchy-theme-color --file "$COLORS" --all)
+
+sed -f "$SED_SCRIPT" "$TPL" >"$OUT/omarchy-colors.el"
+
+# Any {{ ... }} left over is a variable this Omarchy does not provide.
+if grep -q '{{' "$OUT/omarchy-colors.el"; then
+  echo "try-theme: warning, unresolved template variables:" >&2
+  grep -o '{{[^}]*}}' "$OUT/omarchy-colors.el" | sort -u | sed 's/^/  /' >&2
+fi
+
+SETUP="(progn
+  (find-file \"$REPO/config/themes/omarchy-theme.el\")
+  (global-display-line-numbers-mode 1)
+  (global-hl-line-mode 1)
+  (show-paren-mode 1)
+  (split-window-below)
+  (other-window 1)
+  (find-file \"$REPO/config/omarchy.el\")
+  (other-window 1)
+  (goto-char (point-min))
+  (when (search-forward \"omarchy--readable\" nil t)
+    (push-mark (match-beginning 0) t t)
+    (setq deactivate-mark nil))
+  (message \"omarchy: %s -- lower window shows the inactive mode line\" \"$THEME\"))"
+
+ARGS=(-Q
+  --eval "(add-to-list 'load-path \"$OUT\")"
+  --eval "(load-file \"$OUT/omarchy-colors.el\")"
+  --eval "(load-file \"$REPO/config/themes/omarchy-theme.el\")"
+  --eval "(enable-theme 'omarchy)"
+  --eval "$SETUP")
+
+(( TTY )) && ARGS=(-nw "${ARGS[@]}")
+exec emacs "${ARGS[@]}"
