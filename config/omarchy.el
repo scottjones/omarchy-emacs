@@ -56,6 +56,16 @@ themes signalled it with a light.mode marker file, still honored here."
   (let ((colors-file (expand-file-name "omarchy-colors.el" omarchy-theme-directory)))
     (if (file-exists-p colors-file)
         (progn
+          ;; omarchy-colors.el `setq's only the colors its template rendered,
+          ;; so switching from a semantic theme to a legacy color0..15 one
+          ;; would leave the previous theme's semantic colors bound and in
+          ;; use. Clear them first so the theme sees a genuinely absent value.
+          (dolist (sym '(omarchy-color-muted omarchy-color-selection
+                         omarchy-color-dark-fg omarchy-color-light-fg
+                         omarchy-color-bright-fg omarchy-color-dark-bg
+                         omarchy-color-darker-bg omarchy-color-lighter-bg
+                         omarchy-color-orange))
+            (makunbound sym))
           (load-file colors-file)
           ;; Fully disable and unload the theme to clear all stale face settings.
           ;; Includes the legacy split themes so upgrades from <1.9 clean up cleanly.
