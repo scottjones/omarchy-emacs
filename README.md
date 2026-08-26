@@ -4,7 +4,7 @@ An Arch package that auto-syncs Emacs to [Omarchy's](https://github.com/basecamp
 
 ## What it syncs
 
-- **Theme colors.** Driven from `~/.local/state/omarchy/current/theme/omarchy-colors.el`, which Omarchy regenerates from a template (shipped by this package as `omarchy-colors.el.tpl`) every time you run `omarchy-theme-set`. The Emacs theme covers core faces, font-lock, mode-line, line numbers, completion, links, errors/warnings, org-mode, and diff/ediff. See `config/themes/omarchy-theme.el`.
+- **Theme colors.** Driven from `~/.local/state/omarchy/current/theme/omarchy-colors.el`, which Omarchy regenerates from a template (shipped by this package as `omarchy-colors.el.tpl`) every time you run `omarchy-theme-set`. The Emacs theme covers core faces, font-lock, mode-line, line numbers, completion, links, errors/warnings, org-mode, and diff/ediff. Chrome shades that have no ANSI slot — the current-line stripe, comments, borders — come from Omarchy's semantic colors (`muted`, `dark_foreground`, `lighter_background`, `selection`); themes that predate those get a shade blended from their own foreground and background instead. See `config/themes/omarchy-theme.el`.
 - **Font family.** Read from `~/.config/waybar/style.css` — the same source `omarchy-font-set` writes to.
 - **Font size.** Read from your default terminal's config:
   - foot — `~/.config/foot/foot.ini`, the `:size=` in `font=`
@@ -38,13 +38,39 @@ If you have a legacy `~/.emacs` or `~/.emacs.d`, the setup script will warn you 
 | `~/.config/emacs/themes/omarchy-theme.el` | **Managed** — overwritten on every setup run. |
 | `~/.config/emacs/shell-bashrc` | **Yours** — rcfile for Emacs `M-x shell`. |
 | `~/.config/omarchy/hooks/{theme-set,font-set}.d/omarchy-emacs` | **Managed** hook drop-ins (Omarchy 4). Each just calls `omarchy-restart-emacs`; they coexist with any other hooks you keep in those `.d/` directories. On Omarchy 3 (no `.d/` support) these are installed as the single `~/.config/omarchy/hooks/{theme-set,font-set}` files instead, managed while the `omarchy-emacs:managed` marker is intact. |
-| `~/.config/omarchy/themed/omarchy-colors.el.tpl` | Color template consumed by `omarchy-theme-set`. |
+| `~/.config/omarchy/themed/omarchy-colors.el.tpl` | **Managed** — overwritten on every setup run. Color template consumed by `omarchy-theme-set`. |
 
 ## Customizing
 
 - Add personal config to `~/.config/emacs/init.el` *after* the `(load "omarchy")` line.
 - To opt out of the integration without uninstalling, delete that load line — Emacs no longer touches Omarchy state.
 - Don't edit `omarchy.el` or `omarchy-theme.el` — they get overwritten.
+- Comments, line numbers and the inactive mode line are held to a minimum contrast ratio, since Omarchy's shades are chosen for terminal chrome and some sit a bare step off the background. Tune with `omarchy-contrast-floor-dim` (default 3.0) and `omarchy-contrast-floor-text` (default 4.5); set them before the theme loads.
+
+## Developing
+
+`dev/try-theme` opens the working-tree theme in a throwaway Emacs. It doesn't install the
+package and doesn't touch your live Omarchy theme, so it's the fast way to look at a change
+across themes:
+
+```bash
+dev/try-theme                 # the current Omarchy theme
+dev/try-theme tokyo-night     # any installed theme, by directory name
+dev/try-theme --list          # what's installed
+dev/try-theme --tty gruvbox   # terminal frame instead of a GUI window
+```
+
+It renders `omarchy-colors.el.tpl` through Omarchy's own resolver — `omarchy-theme-color
+--file <colors.toml> --all`, the same call `omarchy-theme-set-templates` makes — so what you
+see matches a real `omarchy-theme-set`, including the `color0`..`color15` aliases Omarchy
+synthesizes for themes that predate the semantic `colors.toml`. It warns if the template
+references a variable your Omarchy doesn't provide.
+
+The split window is deliberate: the lower one gives you a real inactive mode line to judge.
+
+For a genuine end-to-end check — hooks, the installed template, live theme switching — build
+and install the package rather than running the setup script against `/usr` (see
+`bin/omarchy-emacs-setup`).
 
 ## Provided commands
 
