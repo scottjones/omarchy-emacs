@@ -25,5 +25,21 @@
 (setq omarchy-color-bright-cyan "{{ color14 }}")
 (setq omarchy-color-bright-white "{{ color15 }}")
 
+;; Omarchy's semantic palette. These have no ANSI slot, so they are the only
+;; source of in-between shades (comment gray, subtle backgrounds, borders).
+;; omarchy-theme-color synthesizes them for legacy color0..color15 themes too,
+;; so they are normally populated -- but they render empty on an install whose
+;; template predates this block, and a theme may set one equal to its own
+;; background. The Emacs theme blends a replacement in both cases.
+(setq omarchy-color-muted "{{ muted }}")
+(setq omarchy-color-selection "{{ selection }}")
+(setq omarchy-color-dark-fg "{{ dark_foreground }}")
+(setq omarchy-color-light-fg "{{ light_foreground }}")
+(setq omarchy-color-bright-fg "{{ bright_foreground }}")
+(setq omarchy-color-dark-bg "{{ dark_background }}")
+(setq omarchy-color-darker-bg "{{ darker_background }}")
+(setq omarchy-color-lighter-bg "{{ lighter_background }}")
+(setq omarchy-color-orange "{{ orange }}")
+
 (provide 'omarchy-colors)
 ;;; omarchy-colors.el ends here
