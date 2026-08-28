@@ -7,6 +7,22 @@
 
 if command -v emacsclient &>/dev/null && emacsclient --eval t &>/dev/null; then
   emacsclient --no-wait --eval \
-    "(progn (load-file (expand-file-name \"~/.config/emacs/omarchy.el\")) (dolist (f (frame-list)) (with-selected-frame f (omarchy-apply-theme) (omarchy-apply-font))))" \
+    "(progn
+       ;; Configs that load the integration themselves (e.g. a Doom setup
+       ;; loading the packaged omarchy.el from ~/.emacs.d) already have
+       ;; omarchy-apply-theme bound. Only fall back to loading a shim
+       ;; otherwise — and don't assume the shim lives in ~/.config/emacs.
+       (unless (fboundp 'omarchy-apply-theme)
+         (let ((shim (seq-find
+                      #'file-exists-p
+                      (list (expand-file-name \"omarchy.el\" user-emacs-directory)
+                            (expand-file-name \"~/.config/emacs/omarchy.el\")))))
+           (when shim
+             (load-file shim))))
+       (when (fboundp 'omarchy-apply-theme)
+         (dolist (f (frame-list))
+           (with-selected-frame f
+             (omarchy-apply-theme)
+             (omarchy-apply-font)))))" \
     2>/dev/null
 fi

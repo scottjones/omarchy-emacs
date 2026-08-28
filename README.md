@@ -40,6 +40,28 @@ If you have a legacy `~/.emacs` or `~/.emacs.d`, the setup script will warn you 
 | `~/.config/omarchy/hooks/{theme-set,font-set}.d/omarchy-emacs` | **Managed** hook drop-ins (Omarchy 4). Each just calls `omarchy-restart-emacs`; they coexist with any other hooks you keep in those `.d/` directories. On Omarchy 3 (no `.d/` support) these are installed as the single `~/.config/omarchy/hooks/{theme-set,font-set}` files instead, managed while the `omarchy-emacs:managed` marker is intact. |
 | `~/.config/omarchy/themed/omarchy-colors.el.tpl` | **Managed** — overwritten on every setup run, and refreshed on Emacs startup if a package upgrade left it behind. Color template consumed by `omarchy-theme-set`. |
 
+## Using with other Emacs configurations (Doom, etc.)
+
+`omarchy-emacs-setup` assumes the vanilla layout (`~/.config/emacs` as the
+live config). If your Emacs config lives elsewhere — e.g. Doom in
+`~/.emacs.d`, which overrides `~/.config/emacs` — you can skip setup and
+load the packaged implementation directly from your own config:
+
+```elisp
+;; Somewhere in your config (Doom: config.el)
+(let ((share "/usr/share/omarchy-emacs/config/"))
+  (when (file-exists-p (expand-file-name "omarchy.el" share))
+    (add-to-list 'custom-theme-load-path (expand-file-name "themes" share))
+    (load (expand-file-name "omarchy.el" share) nil t)
+    (setq doom-theme 'omarchy)))     ; Doom only; vanilla configs get the
+                                     ;; theme from the shim's init.el
+```
+
+This gives you `omarchy-apply-theme` / `omarchy-apply-font` plus the file
+watchers, so theme and font changes re-apply live. The
+`omarchy-restart-emacs` hook detects that the integration is already loaded
+and won't try to load the `~/.config/emacs` shim.
+
 ## Customizing
 
 - Add personal config to `~/.config/emacs/init.el` *after* the `(load "omarchy")` line.
