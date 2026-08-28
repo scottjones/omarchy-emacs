@@ -37,6 +37,11 @@
 
 (add-to-list 'load-path omarchy-theme-directory)
 (add-to-list 'custom-theme-load-path "~/.config/emacs/themes")
+;; Fallback for setups that don't run omarchy-emacs-setup (e.g. a Doom
+;; config loading this file from its own init): locate omarchy-theme.el in
+;; the packaged install next to this file.
+(add-to-list 'custom-theme-load-path
+             (expand-file-name "themes" (file-name-directory load-file-name)))
 
 (defun omarchy-light-theme-p ()
   "Return non-nil if the current Omarchy theme is a light theme.
